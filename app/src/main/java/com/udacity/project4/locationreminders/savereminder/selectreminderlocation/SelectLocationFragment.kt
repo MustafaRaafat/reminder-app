@@ -47,7 +47,16 @@ class SelectLocationFragment : BaseFragment() {
         setHasOptionsMenu(true)
         setDisplayHomeAsUpEnabled(true)
 
-//        TODO: add the map setup implementation
+//        add the map setup implementation
+        val callBackFromMap = OnMapReadyCallback { googleMap ->
+            val ss = LatLng(-34.0, 151.0)
+            googleMap.addMarker(MarkerOptions().position(ss).title("sydney is here"))
+            googleMap.moveCamera(CameraUpdateFactory.newLatLng(ss))
+        }
+
+        val mapFragment =
+            childFragmentManager.findFragmentById(R.id.map_fragment_id) as SupportMapFragment?
+        mapFragment?.getMapAsync(callBackFromMap)
 //        TODO: zoom to the user location after taking his permission
 //        TODO: add style to the map
 //        TODO: put a marker to location that the user selected
@@ -57,6 +66,10 @@ class SelectLocationFragment : BaseFragment() {
         onLocationSelected()
 
         return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
     }
 
     private fun onLocationSelected() {
