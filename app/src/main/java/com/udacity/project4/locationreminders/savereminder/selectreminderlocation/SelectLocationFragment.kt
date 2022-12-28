@@ -34,6 +34,7 @@ class SelectLocationFragment : BaseFragment() {
     //Use Koin to get the view model of the SaveReminder
     override val _viewModel: SaveReminderViewModel by inject()
     private lateinit var binding: FragmentSelectLocationBinding
+    private lateinit var map: GoogleMap
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -49,9 +50,10 @@ class SelectLocationFragment : BaseFragment() {
 
 //        add the map setup implementation
         val callBackFromMap = OnMapReadyCallback { googleMap ->
+            map = googleMap
             val ss = LatLng(-34.0, 151.0)
-            googleMap.addMarker(MarkerOptions().position(ss).title("sydney is here"))
-            googleMap.moveCamera(CameraUpdateFactory.newLatLng(ss))
+            map.addMarker(MarkerOptions().position(ss).title("sydney is here"))
+            map.moveCamera(CameraUpdateFactory.newLatLng(ss))
         }
 
         val mapFragment =
@@ -84,17 +86,21 @@ class SelectLocationFragment : BaseFragment() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        // TODO: Change the map type based on the user's selection.
+//        Change the map type based on the user's selection.
         R.id.normal_map -> {
+            map.mapType = GoogleMap.MAP_TYPE_NORMAL
             true
         }
         R.id.hybrid_map -> {
+            map.mapType = GoogleMap.MAP_TYPE_HYBRID
             true
         }
         R.id.satellite_map -> {
+            map.mapType = GoogleMap.MAP_TYPE_SATELLITE
             true
         }
         R.id.terrain_map -> {
+            map.mapType = GoogleMap.MAP_TYPE_TERRAIN
             true
         }
         else -> super.onOptionsItemSelected(item)
