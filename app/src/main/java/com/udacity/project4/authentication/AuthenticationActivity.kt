@@ -48,7 +48,6 @@ class AuthenticationActivity : AppCompatActivity() {
 
     //        If the user was authenticated, send him to RemindersActivity
     private fun firebaseOnSignResult(res: FirebaseAuthUIAuthenticationResult) {
-        val respo = res.idpResponse
         if (res.resultCode == RESULT_OK) {
             var intent = Intent(this, RemindersActivity::class.java)
             finish()
