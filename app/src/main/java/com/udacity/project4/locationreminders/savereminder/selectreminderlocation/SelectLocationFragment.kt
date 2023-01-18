@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
@@ -39,7 +40,6 @@ class SelectLocationFragment : BaseFragment() {
     private lateinit var binding: FragmentSelectLocationBinding
     private lateinit var map: GoogleMap
     private var marker: Marker? = null
-    private var LOCATION_PERMISSION = 1
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -52,6 +52,16 @@ class SelectLocationFragment : BaseFragment() {
 
         setHasOptionsMenu(true)
         setDisplayHomeAsUpEnabled(true)
+
+        return binding.root
+    }
+
+    private fun setMapStyle(map: GoogleMap) {
+        map.setMapStyle(MapStyleOptions.loadRawResourceStyle(requireContext(), R.raw.map_style))
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
 //        add the map setup implementation
         val callBackFromMap = OnMapReadyCallback { googleMap ->
@@ -82,15 +92,7 @@ class SelectLocationFragment : BaseFragment() {
         val mapFragment =
             childFragmentManager.findFragmentById(R.id.map_fragment_id) as SupportMapFragment?
         mapFragment?.getMapAsync(callBackFromMap)
-        return binding.root
-    }
 
-    private fun setMapStyle(map: GoogleMap) {
-        map.setMapStyle(MapStyleOptions.loadRawResourceStyle(requireContext(), R.raw.map_style))
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
     }
 
     //    call this function after the user confirms on the selected location
@@ -182,26 +184,14 @@ class SelectLocationFragment : BaseFragment() {
         ) {
             map.isMyLocationEnabled = true
         } else {
-            ActivityCompat.requestPermissions(
-                requireActivity(),
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION
-            )
+            requestLancher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-
-        if (requestCode == LOCATION_PERMISSION) {
-            if (grantResults.size > 0 && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                enableMyLocation()
-            } else {
-                _viewModel.showToast.value = "location access needed"
-            }
+    val requestLancher=registerForActivityResult(ActivityResultContracts.RequestPermission()){
+        if (it){
+            enableMyLocation()
+        }else{
+            _viewModel.showErrorMessage.value="location access needed"
         }
     }
 }

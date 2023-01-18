@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
 import com.google.android.gms.common.api.ResolvableApiException
@@ -38,16 +39,43 @@ class SaveReminderFragment : BaseFragment() {
 
     private lateinit var geoFencingClient: GeofencingClient
     private var isLocationEnabole: Boolean = false
+    val runQorH = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
 
     private lateinit var binding: FragmentSaveReminderBinding
-    private val REQUEST_FOREGROUND_AND_BACKGROUND_PERMISSION_RESULT_CODE = 33
-    private val REQUEST_FOREGROUND_ONLY_PERMISSIONS_REQUEST_CODE = 34
-    val runQorH = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
+    private var REQUEST_BACKGROUND_PERMISSION = false
+    private var REQUEST_FOREGROUND_ONLY_PERMISSIONS = false
+
+
+    val requestForground = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        REQUEST_FOREGROUND_ONLY_PERMISSIONS = it
+        if (!it) {
+            _viewModel.showToast.value = "location access needed"
+        }
+    }
+    val requestBackground = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        REQUEST_BACKGROUND_PERMISSION = it
+        if (!it) {
+            _viewModel.showToast.value = "background location access needed"
+        }
+    }
 
     private val geofencePendingIntent: PendingIntent by lazy {
         val intent = Intent(requireContext(), GeofenceBroadcastReceiver::class.java)
-        intent.action = "ACTION_GEOFENCE_EVENT"
-        PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            PendingIntent.getBroadcast(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            )
+        } else {
+            PendingIntent.getBroadcast(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+            )
+        }
     }
 
     override fun onCreateView(
@@ -66,6 +94,17 @@ class SaveReminderFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.lifecycleOwner = this
+        REQUEST_BACKGROUND_PERMISSION = if (runQorH) {
+            PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
+                requireContext(), Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            )
+        } else {
+            true
+        }
+        REQUEST_FOREGROUND_ONLY_PERMISSIONS =
+            (PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
+                requireContext(), Manifest.permission.ACCESS_FINE_LOCATION
+            ))
         binding.selectLocation.setOnClickListener {
 //            Navigate to another fragment to get the user location
             _viewModel.navigationCommand.value =
@@ -90,36 +129,17 @@ class SaveReminderFragment : BaseFragment() {
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
-    ) {
-        if (grantResults.isEmpty()
-            || grantResults[0] == PackageManager.PERMISSION_DENIED
-            || (requestCode == REQUEST_FOREGROUND_AND_BACKGROUND_PERMISSION_RESULT_CODE
-                    && grantResults[1] == PackageManager.PERMISSION_DENIED)
-        ) {
-            _viewModel.showToast.value = "no Permission"
-        } else {
-            _viewModel.showToast.value = "Permission granted"
-            checkDeviceLocationSettingsAndStartGeofence()
-        }
-
-        super.onRequestPermissionsResult(
-            requestCode, permissions, grantResults
-        )
-    }
-
 
     private fun addGeofenceAndSave(data: ReminderDataItem) {
-        if (foregroundAndBackgroundLocationPermissionApproved()) {
+        if (REQUEST_FOREGROUND_ONLY_PERMISSIONS && REQUEST_BACKGROUND_PERMISSION) {
             checkDeviceLocationSettingsAndStartGeofence()
         } else {
             requestForegroundAndBackgroundLocationPermissions()
         }
         if (isLocationEnabole) {
             val geofence = Geofence.Builder()
-                .setRequestId(data.id)
-                .setCircularRegion(_viewModel.latitude.value!!, _viewModel.latitude.value!!, 100f)
+                .setRequestId("data.id")
+                .setCircularRegion(_viewModel.latitude.value!!, _viewModel.longitude.value!!, 100f)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
                 .build()
@@ -158,34 +178,18 @@ class SaveReminderFragment : BaseFragment() {
         }
     }
 
-    @TargetApi(29)
-    private fun foregroundAndBackgroundLocationPermissionApproved(): Boolean {
-        val foregroundLocationApproved =
-            (PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
-                requireContext(), Manifest.permission.ACCESS_FINE_LOCATION
-            ))
-        val backgroundPermissionApproved = if (runQorH) {
-            PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
-                requireContext(), Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            )
-        } else {
-            true
-        }
-        return foregroundLocationApproved && backgroundPermissionApproved
-    }
 
     @TargetApi(29)
     private fun requestForegroundAndBackgroundLocationPermissions() {
-        if (foregroundAndBackgroundLocationPermissionApproved()) return
-        var perArray = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-        val requestCode = when {
-            runQorH -> {
-                perArray += Manifest.permission.ACCESS_BACKGROUND_LOCATION
-                REQUEST_FOREGROUND_AND_BACKGROUND_PERMISSION_RESULT_CODE
-            }
-            else -> REQUEST_FOREGROUND_ONLY_PERMISSIONS_REQUEST_CODE
+        if (runQorH) {
+            if (REQUEST_BACKGROUND_PERMISSION && REQUEST_FOREGROUND_ONLY_PERMISSIONS) return
+            if (!REQUEST_FOREGROUND_ONLY_PERMISSIONS) requestForground.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            if (!REQUEST_BACKGROUND_PERMISSION) requestBackground.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+
+        } else {
+            if (REQUEST_FOREGROUND_ONLY_PERMISSIONS) return
+            requestForground.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
-        ActivityCompat.requestPermissions(requireActivity(), perArray, requestCode)
     }
 
     private fun checkDeviceLocationSettingsAndStartGeofence(resolve: Boolean = true) {
