@@ -39,7 +39,7 @@ class SelectLocationFragment : BaseFragment() {
     private lateinit var binding: FragmentSelectLocationBinding
     private lateinit var map: GoogleMap
     private var marker: Marker? = null
-    private var locationPermission = 1
+    private var LOCATION_PERMISSION = 1
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -136,16 +136,18 @@ class SelectLocationFragment : BaseFragment() {
         map.setOnMapLongClickListener {
             val snippet = String.format(
                 Locale.getDefault(),
-                "Lat: %1\$.5f, Long: %2\$.5f",
+                getString(R.string.lat_long_snippet),
                 it.latitude,
                 it.longitude
             )
             if (marker == null) {
-                marker = map.addMarker(MarkerOptions().position(it).title("pin here").snippet(snippet))
+                marker =
+                    map.addMarker(MarkerOptions().position(it).title("pin here").snippet(snippet))
                 map.animateCamera(CameraUpdateFactory.newLatLngZoom(it, 15f))
             } else {
                 marker!!.remove()
-                marker = map.addMarker(MarkerOptions().position(it).title("pin here").snippet(snippet))
+                marker =
+                    map.addMarker(MarkerOptions().position(it).title("pin here").snippet(snippet))
                 map.animateCamera(CameraUpdateFactory.newLatLngZoom(it, 15f))
             }
         }
@@ -183,7 +185,7 @@ class SelectLocationFragment : BaseFragment() {
             ActivityCompat.requestPermissions(
                 requireActivity(),
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                locationPermission
+                LOCATION_PERMISSION
             )
         }
     }
@@ -194,11 +196,11 @@ class SelectLocationFragment : BaseFragment() {
         grantResults: IntArray
     ) {
 
-        if (requestCode == locationPermission) {
+        if (requestCode == LOCATION_PERMISSION) {
             if (grantResults.size > 0 && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                 enableMyLocation()
             } else {
-                Toast.makeText(context, "location access needed", Toast.LENGTH_SHORT).show()
+                _viewModel.showToast.value = "location access needed"
             }
         }
     }
