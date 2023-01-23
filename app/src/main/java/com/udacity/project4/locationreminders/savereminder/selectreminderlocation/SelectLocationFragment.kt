@@ -184,14 +184,24 @@ class SelectLocationFragment : BaseFragment() {
         ) {
             map.isMyLocationEnabled = true
         } else {
-            requestLancher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            requestLancher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
-    val requestLancher=registerForActivityResult(ActivityResultContracts.RequestPermission()){
-        if (it){
-            enableMyLocation()
-        }else{
-            _viewModel.showErrorMessage.value="location access needed"
+
+    val requestLancher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permission ->
+            when {
+                permission.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
+                    enableMyLocation()
+                }
+                else -> {
+                    _viewModel.showErrorMessage.value = "location access needed"
+                }
+            }
         }
-    }
 }
