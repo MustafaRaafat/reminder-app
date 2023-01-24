@@ -38,4 +38,13 @@ class RemindersListViewModelTest {
             assertEquals(viewModel.remindersList.value!!.size, 1)
         }
     }
+
+    @Test
+    fun loadReminders_snackBarErrorMessage() {
+        mainCoroutineRule.runBlockingTest {
+            data.deleteAllReminders()
+            viewModel.loadReminders()
+            assertEquals(viewModel.showNoData.value, true)
+        }
+    }
 }

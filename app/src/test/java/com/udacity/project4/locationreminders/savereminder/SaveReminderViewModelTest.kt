@@ -41,4 +41,11 @@ class SaveReminderViewModelTest {
             Assert.assertEquals(true, k)
         }
     }
+
+    @Test
+    fun showToast_oneReminder(){
+        val reminder = ReminderDataItem("title", "des", "loc", 1.0, 2.0, "fd")
+        viewmodel.validateAndSaveReminder(reminder)
+        assertEquals(viewmodel.showToast.value,"Reminder Saved !")
+    }
 }
