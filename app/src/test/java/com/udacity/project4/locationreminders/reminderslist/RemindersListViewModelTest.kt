@@ -43,8 +43,11 @@ class RemindersListViewModelTest {
     fun loadReminders_snackBarErrorMessage() {
         mainCoroutineRule.runBlockingTest {
             data.deleteAllReminders()
+            var r = ReminderDTO("hello", "mustafa", "at home", 1.0, 1.0, "id")
+            data.saveReminder(r)
+            data.setReturnError(true)
             viewModel.loadReminders()
-            assertEquals(viewModel.showNoData.value, true)
+            assertEquals("error getting reminders",viewModel.showSnackBar.value)
         }
     }
 }
